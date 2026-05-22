@@ -6,16 +6,25 @@ import random
 
 
 def load_math500(cache_dir: str = "data") -> list[dict]:
-    """Load MATH-500 dataset. Downloads from HuggingFace on first use."""
+    """Load MATH-500 dataset. Uses cached file if present, else downloads."""
     cache_file = os.path.join(cache_dir, "math500.json")
 
     if os.path.exists(cache_file):
         with open(cache_file) as f:
-            return json.load(f)
+            problems = json.load(f)
+        if len(problems) < 500:
+            print(f"WARNING: only {len(problems)} problems in {cache_file} (expected 500).")
+            print("Run: python download_math500.py  to fetch the full dataset.\n")
+        return problems
 
-    print("Downloading MATH-500 from HuggingFace...")
-    from datasets import load_dataset
-    ds = load_dataset("HuggingFaceH4/MATH-500", split="test")
+    print("No cached dataset found. Downloading MATH-500 from HuggingFace...")
+    try:
+        from datasets import load_dataset
+        ds = load_dataset("HuggingFaceH4/MATH-500", split="test")
+    except Exception as e:
+        print(f"Download failed: {e}")
+        print("Run: python download_math500.py")
+        raise SystemExit(1)
 
     problems = []
     for row in ds:

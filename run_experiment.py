@@ -251,7 +251,11 @@ def main():
                     f.write(json.dumps(result) + "\n")
 
                 completed += 1
-                print(f"    BER pre={result.get('ber_pre_cap', '?'):.2f} post={result.get('ber_post_cap', '?'):.2f} "
+                ber_pre = result.get('ber_pre_cap')
+                ber_post = result.get('ber_post_cap')
+                pre_str = f"{ber_pre:.2f}" if isinstance(ber_pre, (int, float)) else "err"
+                post_str = f"{ber_post:.2f}" if isinstance(ber_post, (int, float)) else "err"
+                print(f"    BER pre={pre_str} post={post_str} "
                       f"monitor={'YES' if result.get('monitor_suspicious') else 'no'} "
                       f"task={'ok' if result.get('task_correct') else 'WRONG'}")
                 print()
