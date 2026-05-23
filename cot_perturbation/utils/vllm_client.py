@@ -8,6 +8,7 @@ Start it with e.g.:
 
 import os
 import time
+import requests
 from openai import OpenAI
 
 
@@ -29,7 +30,7 @@ def generate_baseline(
     client: OpenAI,
     model_name: str,
     problem: str,
-    max_tokens: int = 4096,
+    max_tokens: int = 8192,
     temperature: float = 0.7,
     max_retries: int = 3,
 ) -> str:
@@ -62,46 +63,58 @@ def generate_conditioned(
     model_name: str,
     problem: str,
     perturbed_cot: str,
+    prompt_template: str,
     max_tokens: int = 1024,
     temperature: float = 0.7,
+    port: int = 8000,
     max_retries: int = 3,
 ) -> str:
     """Generate a response conditioned on a pre-filled (perturbed) CoT.
 
-    Uses vLLM's continue_final_message to inject the partial assistant turn
-    containing the perturbed think block, then lets the model continue.
+    Uses the raw /v1/completions endpoint with a hand-built prompt that
+    includes the chat template tokens + the pre-filled CoT. This avoids
+    the continue_final_message incompatibility with some chat templates.
 
-    Returns just the newly generated text (the final answer, with no <think>).
+    Args:
+        prompt_template: a format string with {problem} and {cot} placeholders,
+            containing the model's chat template tokens. Defined in configs.py.
+
+    Returns just the newly generated text (the final answer after </think>).
     """
-    # If the perturbed CoT is empty (null perturbation), use an empty think block
+    # Build the prompt: user turn + assistant turn pre-filled up to after </think>
     if perturbed_cot.strip() == "":
-        partial = "<think>\n\n</think>\n\n"
+        # Null perturbation: empty think block
+        cot_content = ""
     else:
-        partial = f"<think>\n{perturbed_cot}\n</think>\n\n"
+        cot_content = perturbed_cot
+
+    prompt = prompt_template.format(problem=problem, cot=cot_content)
 
     for attempt in range(max_retries):
         try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "user", "content": problem},
-                    {"role": "assistant", "content": partial},
-                ],
-                max_tokens=max_tokens,
-                temperature=temperature,
-                extra_body={
-                    "continue_final_message": True,
-                    "add_generation_prompt": False,
+            # Use requests directly for /v1/completions (text completion, not chat)
+            resp = requests.post(
+                f"http://localhost:{port}/v1/completions",
+                json={
+                    "model": model_name,
+                    "prompt": prompt,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "stop": ["<|eot_id|>", "<|im_end|>"],  # stop at end-of-turn for either model
                 },
+                timeout=120,
             )
-            return strip_bpe_artifacts(response.choices[0].message.content)
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["choices"][0]["text"]
+            return strip_bpe_artifacts(text).strip()
         except Exception as e:
             if attempt < max_retries - 1:
                 wait = 2 ** attempt
-                print(f"  vLLM error: {e}. Retrying in {wait}s...")
+                print(f"  vLLM completions error: {e}. Retrying in {wait}s...")
                 time.sleep(wait)
             else:
-                print(f"  vLLM failed after {max_retries} attempts: {e}")
+                print(f"  vLLM completions failed after {max_retries} attempts: {e}")
                 return f"ERROR: {e}"
 
 

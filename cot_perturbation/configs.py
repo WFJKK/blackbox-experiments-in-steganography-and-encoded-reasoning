@@ -9,14 +9,27 @@ MODELS = {
     "r1-distill-8b": {
         "hf_id": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
         "name": "R1-Distill-Llama-8B",
-        "max_tokens": 4096,
+        "max_tokens": 8192,
         "temperature": 0.7,
+        # Llama-3.1 chat template for raw /v1/completions pre-fill
+        "prompt_template": (
+            "<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n"
+            "{problem}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+            "<think>\n{cot}\n</think>\n\n"
+        ),
     },
     "qwen3-8b": {
         "hf_id": "Qwen/Qwen3-8B",
         "name": "Qwen3-8B",
-        "max_tokens": 4096,
+        "max_tokens": 8192,
         "temperature": 0.7,
+        # Qwen/ChatML template for raw /v1/completions pre-fill
+        "prompt_template": (
+            "<|im_start|>user\n"
+            "{problem}<|im_end|>\n"
+            "<|im_start|>assistant\n"
+            "<think>\n{cot}\n</think>\n\n"
+        ),
     },
 }
 
@@ -28,7 +41,8 @@ PERTURBATIONS = [
     ("null", "incoherent", "Empty CoT"),
     ("nonsemantic", "incoherent", "Filler words matching original length"),
     ("scramble", "incoherent", "Words shuffled within each sentence"),
-    ("style", "incoherent", "Full paraphrase with different vocabulary"),
+    # Coherent correct: preserve content, change surface form
+    ("style", "coherent_correct", "Full paraphrase with different vocabulary"),
     # Coherent but wrong: preserve surface, corrupt reasoning
     ("content_perturb", "coherent_wrong", "Subtle errors injected"),
     ("content_replace", "coherent_wrong", "Off-topic reasoning, matching style"),

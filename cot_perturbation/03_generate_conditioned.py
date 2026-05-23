@@ -93,8 +93,10 @@ def main():
             client, served,
             problem=baseline["problem"],
             perturbed_cot=record["perturbed_cot"],
+            prompt_template=model_config["prompt_template"],
             max_tokens=1024,  # answer-only, no need for CoT length
             temperature=model_config["temperature"],
+            port=args.vllm_port,
         )
         elapsed = time.time() - t0
 

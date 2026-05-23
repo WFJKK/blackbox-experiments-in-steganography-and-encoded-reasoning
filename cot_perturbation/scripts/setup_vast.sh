@@ -34,7 +34,7 @@ fi
 echo "=== Installing dependencies ==="
 $PIP install --upgrade pip
 $PIP install vllm
-$PIP install anthropic openai datasets
+$PIP install anthropic openai datasets requests
 
 echo "=== Cloning repository ==="
 cd /workspace
@@ -62,11 +62,11 @@ echo "=== Setup complete ==="
 echo ""
 echo "To start a vLLM server for R1-Distill-8B:"
 echo "  source /workspace/.cot_env"
-echo "  \$VLLM serve deepseek-ai/DeepSeek-R1-Distill-Llama-8B --port 8000 --max-model-len 8192 > /workspace/vllm.log 2>&1 &"
+echo "  \$VLLM serve deepseek-ai/DeepSeek-R1-Distill-Llama-8B --port 8000 --max-model-len 16384 > /workspace/vllm.log 2>&1 &"
 echo ""
 echo "To start a vLLM server for Qwen3-8B:"
 echo "  source /workspace/.cot_env"
-echo "  \$VLLM serve Qwen/Qwen3-8B --port 8000 --max-model-len 8192 > /workspace/vllm.log 2>&1 &"
+echo "  \$VLLM serve Qwen/Qwen3-8B --port 8000 --max-model-len 16384 > /workspace/vllm.log 2>&1 &"
 echo ""
 echo "Wait ~2 minutes for the model to load, then check with:"
 echo "  curl http://localhost:8000/v1/models"
