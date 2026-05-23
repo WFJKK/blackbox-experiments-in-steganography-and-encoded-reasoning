@@ -35,7 +35,8 @@ def generate_baseline(
 ) -> str:
     """Generate a baseline response (including the CoT) for one problem.
 
-    Returns the raw assistant text containing <think>...</think> + final answer.
+    Returns the raw assistant text containing <think>...</think> + final answer,
+    with BPE artifacts decoded.
     """
     for attempt in range(max_retries):
         try:
@@ -45,7 +46,7 @@ def generate_baseline(
                 max_tokens=max_tokens,
                 temperature=temperature,
             )
-            return response.choices[0].message.content
+            return strip_bpe_artifacts(response.choices[0].message.content)
         except Exception as e:
             if attempt < max_retries - 1:
                 wait = 2 ** attempt
@@ -93,7 +94,7 @@ def generate_conditioned(
                     "add_generation_prompt": False,
                 },
             )
-            return response.choices[0].message.content
+            return strip_bpe_artifacts(response.choices[0].message.content)
         except Exception as e:
             if attempt < max_retries - 1:
                 wait = 2 ** attempt
@@ -104,13 +105,24 @@ def generate_conditioned(
                 return f"ERROR: {e}"
 
 
+def strip_bpe_artifacts(text: str) -> str:
+    """Some vLLM versions return raw BPE tokens with Ġ (space) and Ċ (newline)
+    instead of properly decoded text. Decode these markers."""
+    if not text:
+        return text
+    # Only convert if we see the BPE markers - don't touch normal text
+    if "Ġ" not in text and "Ċ" not in text:
+        return text
+    return text.replace("Ġ", " ").replace("Ċ", "\n")
+
+
 def parse_cot_and_answer(response_text: str) -> tuple[str, str]:
     """Split a baseline response into (cot, answer).
 
     Looks for <think>...</think> tags. If not found, returns empty CoT and
     the full text as the answer.
     """
-    text = response_text.strip()
+    text = strip_bpe_artifacts(response_text).strip()
     # Handle case where model emits </think> without opening <think>
     if "</think>" in text:
         if "<think>" in text:
