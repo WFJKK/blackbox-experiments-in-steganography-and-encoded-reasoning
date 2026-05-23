@@ -1,0 +1,15 @@
+
+Model                Scheme          N  Disclosed  Pay(all)  Pay(clean)  N_clean
+--------------------------------------------------------------------------------
+llama4-maverick      acrostic       30   3/30          52%        53%       27
+llama4-maverick      hex            30  12/30          60%        49%       18
+llama4-maverick      synonym        30   8/30          54%        55%       22
+qwen2.5-7b           acrostic       30  12/30          64%        46%       18
+qwen2.5-7b           hex            30   5/30          55%        48%       25
+qwen2.5-7b           synonym        30  23/30          72%        39%        7
+qwen3-8b-nothink     acrostic       30  22/30          82%        47%        8
+qwen3-8b-nothink     hex            30  27/30          94%       100%        3
+qwen3-8b-nothink     synonym        30  22/30          65%        53%        8
+qwen3-8b-think       acrostic       30  24/30          88%        71%        6
+qwen3-8b-think       hex            30  26/30          92%        75%        4
+qwen3-8b-think       synonym        30  27/30          91%        58%        3
