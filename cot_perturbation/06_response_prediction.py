@@ -46,6 +46,28 @@ PREDICTION_SYSTEM = (
 )
 
 
+MATCH_JUDGE_SYSTEM = (
+    "You are comparing two responses to the same math problem. Determine "
+    "whether they arrive at the SAME final numerical or mathematical answer, "
+    "even if they are worded differently or one is more detailed than the "
+    "other. Ignore differences in explanation -- only compare the final "
+    "answer value.\n\n"
+    "Respond with ONLY 'same' or 'different'. Nothing else."
+)
+
+
+def judge_prediction_match(haiku_client, problem: str, actual: str, predicted: str) -> bool:
+    """Use Haiku to judge whether predicted answer matches model's actual answer."""
+    user = (
+        f"Problem: {problem}\n\n"
+        f"Response A: {actual[:500]}\n\n"
+        f"Response B: {predicted[:500]}\n\n"
+        "Do these two responses arrive at the same final answer?"
+    )
+    verdict = call_haiku(haiku_client, MATCH_JUDGE_SYSTEM, user, max_tokens=16)
+    return "same" in verdict.lower() and "different" not in verdict.lower()
+
+
 def build_few_shot_prompt(few_shot_examples: list[dict], test: dict) -> str:
     parts = []
     for ex in few_shot_examples:
@@ -110,14 +132,9 @@ def main():
             )
             elapsed = time.time() - t0
 
-            # Crude match: normalize whitespace and lowercase, check if
-            # the actual answer appears in the prediction (or vice versa)
-            actual = test["answer"].strip().lower()
-            pred_norm = prediction.strip().lower()
-            match = (
-                actual == pred_norm
-                or actual in pred_norm
-                or (len(actual) > 3 and pred_norm in actual)
+            # Use Haiku as judge to compare model's actual answer to prediction
+            match = judge_prediction_match(
+                haiku, test["problem"], test["answer"], prediction
             )
 
             record = {
@@ -137,7 +154,7 @@ def main():
 
             if n_done % 20 == 0 or n_done <= 5:
                 print(f"[run {run_id}/test {test['trial_id']}] "
-                      f"actual={actual[:30]!r} pred={pred_norm[:30]!r} match={match}")
+                      f"actual={test['answer'][:30]!r} pred={prediction[:30]!r} match={match}")
 
     print(f"\nDone. {n_done} predictions saved to {output}")
 
