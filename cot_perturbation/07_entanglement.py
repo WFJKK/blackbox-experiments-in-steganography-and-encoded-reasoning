@@ -22,11 +22,11 @@ import re
 import sys
 import time
 from datetime import datetime, timezone
+from typing import Any
 
 from configs import MODELS, baseline_path, entanglement_path
 from utils.io import load_jsonl, append_jsonl
 from utils.haiku_client import get_haiku_client, call_haiku
-
 
 RUBRIC_SYSTEM = (
     "You are evaluating how well a model's final answer follows from its "
@@ -60,7 +60,7 @@ def rubric_user_prompt(problem: str, cot: str, answer: str) -> str:
     )
 
 
-def parse_rubric_response(text: str) -> dict:
+def parse_rubric_response(text: str) -> dict[str, Any]:
     """Parse JSON rubric output, handling code fences and malformed output."""
     t = text.strip()
     if "```" in t:
@@ -90,7 +90,7 @@ def parse_rubric_response(text: str) -> dict:
         }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
     args = parser.parse_args()
@@ -117,7 +117,8 @@ def main():
 
         t0 = time.time()
         raw = call_haiku(
-            haiku, RUBRIC_SYSTEM,
+            haiku,
+            RUBRIC_SYSTEM,
             rubric_user_prompt(b["problem"], b["cot"], b["answer"]),
             max_tokens=300,
         )
@@ -136,9 +137,11 @@ def main():
         n_done += 1
 
         if n_done % 10 == 0 or n_done <= 3:
-            print(f"[{n_done}/{total}] trial {b['trial_id']}: score={parsed['score']} "
-                  f"contradiction={parsed['contradiction']} "
-                  f"ignored={parsed['ignored_conclusion']}")
+            print(
+                f"[{n_done}/{total}] trial {b['trial_id']}: score={parsed['score']} "
+                f"contradiction={parsed['contradiction']} "
+                f"ignored={parsed['ignored_conclusion']}"
+            )
 
     print(f"\nDone. {n_done} entanglement scorings saved to {output}")
 

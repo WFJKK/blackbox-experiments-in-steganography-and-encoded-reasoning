@@ -3,3 +3,7 @@ __pycache__/
 .env
 data/
 .DS_Store
+__MACOSX/
+results/test.jsonl
+results/v2_smoke*.jsonl
+results/smoke*.jsonl

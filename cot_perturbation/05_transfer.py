@@ -26,7 +26,6 @@ from configs import MODELS, baseline_path, perturbed_cot_path, transfer_path
 from utils.io import load_jsonl, append_jsonl
 from utils.haiku_client import get_haiku_client, call_haiku
 
-
 TRANSFER_SYSTEM = (
     "You will be given a math problem and a reasoning trace that some other "
     "model produced while thinking about the problem. Read the trace, then "
@@ -45,7 +44,7 @@ def transfer_user_prompt(problem: str, cot: str) -> str:
     )
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
     args = parser.parse_args()
@@ -64,26 +63,30 @@ def main():
     # Build the list of (problem, cot, condition) to give Haiku
     to_run = []
     for b in baselines.values():
-        to_run.append({
-            "trial_id": b["trial_id"],
-            "condition": "baseline",
-            "problem": b["problem"],
-            "ground_truth": b["ground_truth"],
-            "cot": b["cot"],
-        })
+        to_run.append(
+            {
+                "trial_id": b["trial_id"],
+                "condition": "baseline",
+                "problem": b["problem"],
+                "ground_truth": b["ground_truth"],
+                "cot": b["cot"],
+            }
+        )
     for p in perturbed_cots:
         b = baselines.get(p["trial_id"])
         if b is None:
             continue
         if p["perturbed_cot"].startswith("ERROR:"):
             continue
-        to_run.append({
-            "trial_id": p["trial_id"],
-            "condition": p["perturbation_type"],
-            "problem": b["problem"],
-            "ground_truth": b["ground_truth"],
-            "cot": p["perturbed_cot"],
-        })
+        to_run.append(
+            {
+                "trial_id": p["trial_id"],
+                "condition": p["perturbation_type"],
+                "problem": b["problem"],
+                "ground_truth": b["ground_truth"],
+                "cot": p["perturbed_cot"],
+            }
+        )
 
     total = len(to_run)
     n_done = len(existing)
@@ -96,7 +99,8 @@ def main():
 
         t0 = time.time()
         haiku_response = call_haiku(
-            haiku, TRANSFER_SYSTEM,
+            haiku,
+            TRANSFER_SYSTEM,
             transfer_user_prompt(trial["problem"], trial["cot"]),
             max_tokens=1024,
         )
@@ -115,8 +119,10 @@ def main():
         append_jsonl(output, record)
         n_done += 1
         if n_done % 20 == 0 or n_done <= 5:
-            print(f"[{n_done}/{total}] trial {trial['trial_id']} / {trial['condition']}: "
-                  f"{haiku_response[:80]!r}")
+            print(
+                f"[{n_done}/{total}] trial {trial['trial_id']} / {trial['condition']}: "
+                f"{haiku_response[:80]!r}"
+            )
 
     print(f"\nDone. {n_done} transfer responses saved to {output}")
     print("To evaluate accuracy, run analyse.py.")

@@ -2,15 +2,16 @@
 
 import time
 
+import anthropic
 
-def get_haiku_client():
+
+def get_haiku_client() -> anthropic.Anthropic:
     """Get Anthropic client (uses ANTHROPIC_API_KEY env var)."""
-    import anthropic
     return anthropic.Anthropic()
 
 
 def call_haiku(
-    client,
+    client: anthropic.Anthropic,
     system: str,
     user: str,
     max_tokens: int = 2048,
@@ -29,7 +30,7 @@ def call_haiku(
             return response.content[0].text.strip()
         except Exception as e:
             if attempt < max_retries - 1:
-                wait = 2 ** attempt
+                wait = 2**attempt
                 print(f"  Haiku error: {e}. Retrying in {wait}s...")
                 time.sleep(wait)
             else:

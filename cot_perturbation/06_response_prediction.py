@@ -24,14 +24,19 @@ import random
 import sys
 import time
 from datetime import datetime, timezone
+from typing import Any
+
+import anthropic
 
 from configs import (
-    MODELS, N_RESPONSE_PREDICTION_RUNS, N_RESPONSE_PREDICTION_PER_RUN,
-    baseline_path, response_prediction_path,
+    MODELS,
+    N_RESPONSE_PREDICTION_RUNS,
+    N_RESPONSE_PREDICTION_PER_RUN,
+    baseline_path,
+    response_prediction_path,
 )
 from utils.io import load_jsonl, append_jsonl
 from utils.haiku_client import get_haiku_client, call_haiku
-
 
 PREDICTION_SYSTEM = (
     "You will see several examples of (problem, reasoning trace, final answer) "
@@ -56,7 +61,9 @@ MATCH_JUDGE_SYSTEM = (
 )
 
 
-def judge_prediction_match(haiku_client, problem: str, actual: str, predicted: str) -> bool:
+def judge_prediction_match(
+    haiku_client: anthropic.Anthropic, problem: str, actual: str, predicted: str
+) -> bool:
     """Use Haiku to judge whether predicted answer matches model's actual answer."""
     user = (
         f"Problem: {problem}\n\n"
@@ -68,7 +75,9 @@ def judge_prediction_match(haiku_client, problem: str, actual: str, predicted: s
     return "same" in verdict.lower() and "different" not in verdict.lower()
 
 
-def build_few_shot_prompt(few_shot_examples: list[dict], test: dict) -> str:
+def build_few_shot_prompt(
+    few_shot_examples: list[dict[str, Any]], test: dict[str, Any]
+) -> str:
     parts = []
     for ex in few_shot_examples:
         parts.append(
@@ -78,14 +87,12 @@ def build_few_shot_prompt(few_shot_examples: list[dict], test: dict) -> str:
             f"---"
         )
     parts.append(
-        f"Problem: {test['problem']}\n"
-        f"Reasoning: {test['cot']}\n"
-        f"Final answer:"
+        f"Problem: {test['problem']}\n" f"Reasoning: {test['cot']}\n" f"Final answer:"
     )
     return "\n".join(parts)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
     parser.add_argument("--n-runs", type=int, default=N_RESPONSE_PREDICTION_RUNS)
@@ -95,7 +102,9 @@ def main():
 
     baselines = load_jsonl(baseline_path(args.model))
     if len(baselines) < args.n_few_shot + args.n_per_run:
-        print(f"ERROR: need at least {args.n_few_shot + args.n_per_run} baselines, have {len(baselines)}")
+        print(
+            f"ERROR: need at least {args.n_few_shot + args.n_per_run} baselines, have {len(baselines)}"
+        )
         sys.exit(1)
 
     output = response_prediction_path(args.model)
@@ -103,8 +112,10 @@ def main():
 
     haiku = get_haiku_client()
 
-    print(f"Running {args.n_runs} runs x {args.n_per_run} predictions = "
-          f"{args.n_runs * args.n_per_run} total")
+    print(
+        f"Running {args.n_runs} runs x {args.n_per_run} predictions = "
+        f"{args.n_runs * args.n_per_run} total"
+    )
 
     n_done = len(existing)
     for run_id in range(args.n_runs):
@@ -126,7 +137,8 @@ def main():
 
             t0 = time.time()
             prediction = call_haiku(
-                haiku, PREDICTION_SYSTEM,
+                haiku,
+                PREDICTION_SYSTEM,
                 build_few_shot_prompt(few_shot, test),
                 max_tokens=200,
             )
@@ -153,8 +165,10 @@ def main():
             n_done += 1
 
             if n_done % 20 == 0 or n_done <= 5:
-                print(f"[run {run_id}/test {test['trial_id']}] "
-                      f"actual={test['answer'][:30]!r} pred={prediction[:30]!r} match={match}")
+                print(
+                    f"[run {run_id}/test {test['trial_id']}] "
+                    f"actual={test['answer'][:30]!r} pred={prediction[:30]!r} match={match}"
+                )
 
     print(f"\nDone. {n_done} predictions saved to {output}")
 

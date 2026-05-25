@@ -1,4 +1,7 @@
-torch>=2.0
-transformers>=4.40
-numpy
-accelerate
+# Prompted steganography (root)
+openai>=1.0
+anthropic>=0.30
+datasets
+
+# CoT perturbation (cot_perturbation/)
+# Also requires: vllm (install separately on GPU instance)

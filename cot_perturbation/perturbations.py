@@ -10,11 +10,32 @@ a Random instance for reproducibility.
 import random
 import re
 
+import anthropic
+
 # Filler words used in nonsemantic and extend perturbations
 FILLER_TOKENS = [
-    "hmm", "let", "me", "think", "so", "well", "actually", "wait",
-    "okay", "ok", "right", "yes", "now", "then", "thus", "also",
-    "and", "but", "however", "perhaps", "maybe", "alright",
+    "hmm",
+    "let",
+    "me",
+    "think",
+    "so",
+    "well",
+    "actually",
+    "wait",
+    "okay",
+    "ok",
+    "right",
+    "yes",
+    "now",
+    "then",
+    "thus",
+    "also",
+    "and",
+    "but",
+    "however",
+    "perhaps",
+    "maybe",
+    "alright",
 ]
 
 
@@ -22,7 +43,8 @@ FILLER_TOKENS = [
 # Deterministic perturbations
 # ============================================================================
 
-def perturb_null(cot: str, rng: random.Random = None) -> str:
+
+def perturb_null(cot: str, rng: random.Random | None = None) -> str:
     """Return an empty CoT."""
     return ""
 
@@ -38,7 +60,7 @@ def perturb_nonsemantic(cot: str, rng: random.Random) -> str:
 def perturb_scramble(cot: str, rng: random.Random) -> str:
     """Shuffle words within each sentence, preserving sentence boundaries."""
     # Split on sentence-ending punctuation, keeping the punctuation
-    sentences = re.split(r'([.!?])\s+', cot)
+    sentences = re.split(r"([.!?])\s+", cot)
     out_parts = []
     for sent in sentences:
         if sent.strip() in (".", "!", "?"):
@@ -54,11 +76,11 @@ def perturb_scramble(cot: str, rng: random.Random) -> str:
     # Re-join with spaces
     result = " ".join(p for p in out_parts if p)
     # Clean up doubled punctuation
-    result = re.sub(r'\s+([.!?])', r'\1', result)
+    result = re.sub(r"\s+([.!?])", r"\1", result)
     return result
 
 
-def perturb_truncate(cot: str, rng: random.Random = None) -> str:
+def perturb_truncate(cot: str, rng: random.Random | None = None) -> str:
     """Truncate the CoT to roughly half its word count, ending at a sentence boundary."""
     words = cot.split()
     if len(words) <= 4:
@@ -68,9 +90,9 @@ def perturb_truncate(cot: str, rng: random.Random = None) -> str:
     # Try to end at a sentence boundary by finding the last period/!/? in the
     # truncated portion
     last_punct = max(
-        truncated.rfind('.'),
-        truncated.rfind('!'),
-        truncated.rfind('?'),
+        truncated.rfind("."),
+        truncated.rfind("!"),
+        truncated.rfind("?"),
     )
     if last_punct > len(truncated) // 2:
         truncated = truncated[: last_punct + 1]
@@ -135,25 +157,28 @@ CONTENT_REPLACE_SYSTEM = (
 )
 
 
-def perturb_style(cot: str, haiku_client) -> str:
+def perturb_style(cot: str, haiku_client: anthropic.Anthropic) -> str:
     """Full paraphrase of the CoT via Haiku, preserving math, changing language."""
     from utils.haiku_client import call_haiku
+
     if cot.strip() == "":
         return ""
     return call_haiku(haiku_client, STYLE_SYSTEM, cot, max_tokens=2048)
 
 
-def perturb_content_perturb(cot: str, haiku_client) -> str:
+def perturb_content_perturb(cot: str, haiku_client: anthropic.Anthropic) -> str:
     """Inject a subtle error via Haiku, preserving style."""
     from utils.haiku_client import call_haiku
+
     if cot.strip() == "":
         return ""
     return call_haiku(haiku_client, CONTENT_PERTURB_SYSTEM, cot, max_tokens=2048)
 
 
-def perturb_content_replace(cot: str, haiku_client) -> str:
+def perturb_content_replace(cot: str, haiku_client: anthropic.Anthropic) -> str:
     """Replace with off-topic reasoning matching style and length via Haiku."""
     from utils.haiku_client import call_haiku
+
     if cot.strip() == "":
         return ""
     return call_haiku(haiku_client, CONTENT_REPLACE_SYSTEM, cot, max_tokens=2048)
@@ -163,8 +188,13 @@ def perturb_content_replace(cot: str, haiku_client) -> str:
 # Dispatch
 # ============================================================================
 
-def apply_perturbation(perturbation_type: str, cot: str, rng: random.Random,
-                       haiku_client=None) -> str:
+
+def apply_perturbation(
+    perturbation_type: str,
+    cot: str,
+    rng: random.Random,
+    haiku_client: anthropic.Anthropic | None = None,
+) -> str:
     """Apply a perturbation by name. Returns the perturbed CoT."""
     if perturbation_type == "null":
         return perturb_null(cot)
@@ -176,10 +206,14 @@ def apply_perturbation(perturbation_type: str, cot: str, rng: random.Random,
         assert haiku_client is not None, "style perturbation requires haiku client"
         return perturb_style(cot, haiku_client)
     elif perturbation_type == "content_perturb":
-        assert haiku_client is not None, "content_perturb perturbation requires haiku client"
+        assert (
+            haiku_client is not None
+        ), "content_perturb perturbation requires haiku client"
         return perturb_content_perturb(cot, haiku_client)
     elif perturbation_type == "content_replace":
-        assert haiku_client is not None, "content_replace perturbation requires haiku client"
+        assert (
+            haiku_client is not None
+        ), "content_replace perturbation requires haiku client"
         return perturb_content_replace(cot, haiku_client)
     elif perturbation_type == "truncate":
         return perturb_truncate(cot)

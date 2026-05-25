@@ -27,7 +27,7 @@ from utils.haiku_client import get_haiku_client
 from perturbations import apply_perturbation
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
     parser.add_argument("--seed", type=int, default=42)
@@ -40,8 +40,7 @@ def main():
 
     output = perturbed_cot_path(args.model)
     existing_keys = {
-        (r["trial_id"], r["perturbation_type"])
-        for r in load_jsonl(output)
+        (r["trial_id"], r["perturbation_type"]) for r in load_jsonl(output)
     }
 
     haiku_client = get_haiku_client()
@@ -81,9 +80,11 @@ def main():
             }
             append_jsonl(output, record)
             n_done += 1
-            print(f"[{n_done}/{total_needed}] trial {trial_id} / {pert_type}: "
-                  f"{len(cot.split())} -> {len(perturbed.split())} words "
-                  f"({elapsed:.1f}s)")
+            print(
+                f"[{n_done}/{total_needed}] trial {trial_id} / {pert_type}: "
+                f"{len(cot.split())} -> {len(perturbed.split())} words "
+                f"({elapsed:.1f}s)"
+            )
 
     print(f"\nDone. {n_done} perturbations saved to {output}")
 

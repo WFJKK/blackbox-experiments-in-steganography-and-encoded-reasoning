@@ -4,13 +4,14 @@ import json
 import os
 import random
 import sys
+from typing import Any
 
 
-def load_jsonl(path: str) -> list[dict]:
+def load_jsonl(path: str) -> list[dict[str, Any]]:
     """Load a JSONL file. Returns an empty list if the file doesn't exist."""
     if not os.path.exists(path):
         return []
-    out = []
+    out: list[dict[str, Any]] = []
     with open(path) as f:
         for line in f:
             line = line.strip()
@@ -23,14 +24,14 @@ def load_jsonl(path: str) -> list[dict]:
     return out
 
 
-def append_jsonl(path: str, record: dict):
+def append_jsonl(path: str, record: dict[str, Any]) -> None:
     """Append one JSON record as a line to the file."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "a") as f:
         f.write(json.dumps(record) + "\n")
 
 
-def load_math500() -> list[dict]:
+def load_math500() -> list[dict[str, Any]]:
     """Load MATH-500. Looks in ../data/ first, then current dir."""
     candidates = [
         "../data/math500.json",
@@ -41,11 +42,14 @@ def load_math500() -> list[dict]:
         if os.path.exists(path):
             with open(path) as f:
                 return json.load(f)
-    print("ERROR: MATH-500 not found. Run download_math500.py in the parent directory.", file=sys.stderr)
+    print(
+        "ERROR: MATH-500 not found. Run download_math500.py in the parent directory.",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 
-def sample_problems(n: int, seed: int = 42) -> list[dict]:
+def sample_problems(n: int, seed: int = 42) -> list[dict[str, Any]]:
     """Sample n MATH-500 problems with a fixed seed for reproducibility across all scripts."""
     problems = load_math500()
     rng = random.Random(seed)

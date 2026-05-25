@@ -15,8 +15,13 @@ import argparse
 import math
 from collections import defaultdict
 from configs import (
-    MODELS, PERTURBATIONS, evaluation_path, transfer_path,
-    response_prediction_path, entanglement_path, baseline_path,
+    MODELS,
+    PERTURBATIONS,
+    evaluation_path,
+    transfer_path,
+    response_prediction_path,
+    entanglement_path,
+    baseline_path,
 )
 from utils.io import load_jsonl
 
@@ -37,7 +42,7 @@ def fmt_pct_ci(k: int, n: int) -> str:
     return f"{p:.0%} [{lo:.0%}, {hi:.0%}]"
 
 
-def analyse_model(model_key: str):
+def analyse_model(model_key: str) -> None:
     print(f"\n{'='*78}")
     print(f"  Model: {MODELS[model_key]['name']}")
     print(f"{'='*78}")
@@ -57,10 +62,14 @@ def analyse_model(model_key: str):
     baseline_acc = baseline_correct / baseline_n if baseline_n else 0
 
     print(f"\n--- Task accuracy (E_1 perturbation effects) ---")
-    print(f"{'Condition':<22} {'Category':<18} {'N':>4} {'Accuracy':>22} {'Δ from baseline':>16}")
+    print(
+        f"{'Condition':<22} {'Category':<18} {'N':>4} {'Accuracy':>22} {'Δ from baseline':>16}"
+    )
     print("-" * 86)
-    print(f"{'baseline':<22} {'-':<18} {baseline_n:>4} "
-          f"{fmt_pct_ci(baseline_correct, baseline_n):>22} {'-':>16}")
+    print(
+        f"{'baseline':<22} {'-':<18} {baseline_n:>4} "
+        f"{fmt_pct_ci(baseline_correct, baseline_n):>22} {'-':>16}"
+    )
     for pert_type, category, _ in PERTURBATIONS:
         results = by_condition.get(pert_type, [])
         if not results:
@@ -69,8 +78,10 @@ def analyse_model(model_key: str):
         k, n = sum(results), len(results)
         acc = k / n
         delta = acc - baseline_acc
-        print(f"{pert_type:<22} {category:<18} {n:>4} "
-              f"{fmt_pct_ci(k, n):>22} {delta:>+15.0%}")
+        print(
+            f"{pert_type:<22} {category:<18} {n:>4} "
+            f"{fmt_pct_ci(k, n):>22} {delta:>+15.0%}"
+        )
 
     # --- Step 5: E_2 cross-model transfer ---
     transfer_data = load_jsonl(transfer_path(model_key))
@@ -133,17 +144,24 @@ def analyse_model(model_key: str):
             mean_score = sum(e["score"] for e in valid) / n
             contradiction_rate = sum(e["contradiction"] for e in valid) / n
             ignored_rate = sum(e["ignored_conclusion"] for e in valid) / n
-            print(f"\n--- Entanglement (E_4.1.2): rubric scoring of CoT-answer pairs ---")
+            print(
+                f"\n--- Entanglement (E_4.1.2): rubric scoring of CoT-answer pairs ---"
+            )
             print(f"N = {n}, mean score = {mean_score:.2f}/5")
-            print(f"Contradictions: {fmt_pct_ci(sum(e['contradiction'] for e in valid), n)}")
-            print(f"Ignored conclusions: {fmt_pct_ci(sum(e['ignored_conclusion'] for e in valid), n)}")
+            print(
+                f"Contradictions: {fmt_pct_ci(sum(e['contradiction'] for e in valid), n)}"
+            )
+            print(
+                f"Ignored conclusions: {fmt_pct_ci(sum(e['ignored_conclusion'] for e in valid), n)}"
+            )
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", choices=list(MODELS.keys()))
-    parser.add_argument("--all", action="store_true",
-                        help="Run for all models in configs")
+    parser.add_argument(
+        "--all", action="store_true", help="Run for all models in configs"
+    )
     args = parser.parse_args()
 
     if args.all:

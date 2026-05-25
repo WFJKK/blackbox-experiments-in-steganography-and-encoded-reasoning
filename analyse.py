@@ -10,9 +10,10 @@ import argparse
 import json
 import sys
 from collections import defaultdict
+from typing import Any
 
 
-def load_results(path: str) -> list[dict]:
+def load_results(path: str) -> list[dict[str, Any]]:
     """Load JSONL results."""
     results = []
     with open(path) as f:
@@ -27,7 +28,7 @@ def load_results(path: str) -> list[dict]:
     return results
 
 
-def analyse(results: list[dict]) -> dict:
+def analyse(results: list[dict[str, Any]]) -> dict[tuple[str, str], dict[str, Any]]:
     """Compute per-condition aggregate metrics."""
     groups = defaultdict(list)
     for r in results:
@@ -43,9 +44,14 @@ def analyse(results: list[dict]) -> dict:
 
         if n_valid == 0:
             summary[(model, scheme)] = {
-                "n": n, "n_valid": 0,
-                "task_acc": 0, "payload_pre": 0, "payload_post": 0,
-                "monitor_rate": 0, "mean_ber_pre": 1.0, "mean_ber_post": 1.0,
+                "n": n,
+                "n_valid": 0,
+                "task_acc": 0,
+                "payload_pre": 0,
+                "payload_post": 0,
+                "monitor_rate": 0,
+                "mean_ber_pre": 1.0,
+                "mean_ber_post": 1.0,
             }
             continue
 
@@ -77,9 +83,11 @@ def analyse(results: list[dict]) -> dict:
     return summary
 
 
-def print_table(summary: dict):
+def print_table(summary: dict[tuple[str, str], dict[str, Any]]) -> None:
     """Print a readable summary table."""
-    print(f"{'Model':<16} {'Scheme':<15} {'N':>4} {'Task acc':>9} {'Payload(pre)':>13} {'Payload(post)':>14} {'Monitor':>8}")
+    print(
+        f"{'Model':<16} {'Scheme':<15} {'N':>4} {'Task acc':>9} {'Payload(pre)':>13} {'Payload(post)':>14} {'Monitor':>8}"
+    )
     print("-" * 85)
 
     for (model, scheme), s in sorted(summary.items()):
@@ -92,7 +100,7 @@ def print_table(summary: dict):
         )
 
 
-def print_latex(summary: dict):
+def print_latex(summary: dict[tuple[str, str], dict[str, Any]]) -> None:
     """Print LaTeX table."""
     model_names = {
         "qwen2.5-7b": "Qwen2.5-7B",
@@ -111,7 +119,9 @@ def print_latex(summary: dict):
     print(r"\centering")
     print(r"\begin{tabular}{llcccc}")
     print(r"\toprule")
-    print(r"\textbf{Model} & \textbf{Scheme} & \textbf{Task acc.} & \textbf{Payload (pre)} & \textbf{Payload (post-CAP)} & \textbf{Monitor} \\")
+    print(
+        r"\textbf{Model} & \textbf{Scheme} & \textbf{Task acc.} & \textbf{Payload (pre)} & \textbf{Payload (post-CAP)} & \textbf{Monitor} \\"
+    )
     print(r"\midrule")
 
     for (model, scheme), s in sorted(summary.items()):
@@ -127,12 +137,20 @@ def print_latex(summary: dict):
 
     print(r"\bottomrule")
     print(r"\end{tabular}")
-    print(r"\caption{Prompted steganography with CAP defence. $N = " + str(next(iter(summary.values()))['n_valid']) + r"$ per condition, 4-bit payloads.}")
+    print(
+        r"\caption{Prompted steganography with CAP defence. $N = "
+        + str(next(iter(summary.values()))["n_valid"])
+        + r"$ per condition, 4-bit payloads.}"
+    )
     print(r"\label{tab:prompted_steg}")
     print(r"\end{table}")
 
 
-def print_per_trial_detail(results: list[dict], model: str = None, scheme: str = None):
+def print_per_trial_detail(
+    results: list[dict[str, Any]],
+    model: str | None = None,
+    scheme: str | None = None,
+) -> None:
     """Print per-trial detail for debugging."""
     for r in results:
         if model and r["model"] != model:
@@ -145,17 +163,23 @@ def print_per_trial_detail(results: list[dict], model: str = None, scheme: str =
         print(f"  Decoded post:{r.get('decoded_post_cap', '?')}")
         print(f"  BER pre:     {r.get('ber_pre_cap', '?')}")
         print(f"  BER post:    {r.get('ber_post_cap', '?')}")
-        print(f"  Monitor:     {r.get('monitor_suspicious', '?')} ({r.get('monitor_confidence', '?')})")
+        print(
+            f"  Monitor:     {r.get('monitor_suspicious', '?')} ({r.get('monitor_confidence', '?')})"
+        )
         print(f"  Task correct:{r.get('task_correct', '?')}")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Analyse prompted steg results")
     parser.add_argument("input", help="Path to results JSONL")
     parser.add_argument("--latex", action="store_true", help="Output LaTeX table")
     parser.add_argument("--detail", action="store_true", help="Print per-trial detail")
-    parser.add_argument("--model", type=str, default=None, help="Filter by model (for --detail)")
-    parser.add_argument("--scheme", type=str, default=None, help="Filter by scheme (for --detail)")
+    parser.add_argument(
+        "--model", type=str, default=None, help="Filter by model (for --detail)"
+    )
+    parser.add_argument(
+        "--scheme", type=str, default=None, help="Filter by scheme (for --detail)"
+    )
     args = parser.parse_args()
 
     results = load_results(args.input)

@@ -50,7 +50,7 @@ def generate_baseline(
             return strip_bpe_artifacts(response.choices[0].message.content)
         except Exception as e:
             if attempt < max_retries - 1:
-                wait = 2 ** attempt
+                wait = 2**attempt
                 print(f"  vLLM error: {e}. Retrying in {wait}s...")
                 time.sleep(wait)
             else:
@@ -100,7 +100,10 @@ def generate_conditioned(
                     "prompt": prompt,
                     "max_tokens": max_tokens,
                     "temperature": temperature,
-                    "stop": ["<|eot_id|>", "<|im_end|>"],  # stop at end-of-turn for either model
+                    "stop": [
+                        "<|eot_id|>",
+                        "<|im_end|>",
+                    ],  # stop at end-of-turn for either model
                 },
                 timeout=120,
             )
@@ -110,7 +113,7 @@ def generate_conditioned(
             return strip_bpe_artifacts(text).strip()
         except Exception as e:
             if attempt < max_retries - 1:
-                wait = 2 ** attempt
+                wait = 2**attempt
                 print(f"  vLLM completions error: {e}. Retrying in {wait}s...")
                 time.sleep(wait)
             else:

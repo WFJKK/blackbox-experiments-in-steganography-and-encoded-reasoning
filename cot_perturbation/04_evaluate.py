@@ -16,11 +16,11 @@ import argparse
 import sys
 import time
 from datetime import datetime, timezone
+from typing import Any
 
 from configs import MODELS, baseline_path, conditioned_path, evaluation_path
 from utils.io import load_jsonl, append_jsonl
 from utils.haiku_client import get_haiku_client, call_haiku
-
 
 JUDGE_SYSTEM = (
     "You are a math answer checker. You will be given a math problem, the "
@@ -45,7 +45,7 @@ def is_correct(verdict: str) -> bool:
     return "correct" in v and "incorrect" not in v
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
     args = parser.parse_args()
@@ -57,31 +57,32 @@ def main():
         sys.exit(1)
 
     output = evaluation_path(args.model)
-    existing_keys = {
-        (r["trial_id"], r["condition"])
-        for r in load_jsonl(output)
-    }
+    existing_keys = {(r["trial_id"], r["condition"]) for r in load_jsonl(output)}
 
     haiku = get_haiku_client()
 
     # Build the list of trials to judge: baselines + each perturbation
     judgments_needed = []
     for b in baselines:
-        judgments_needed.append({
-            "trial_id": b["trial_id"],
-            "condition": "baseline",
-            "problem": b["problem"],
-            "ground_truth": b["ground_truth"],
-            "model_answer": b["answer"],
-        })
+        judgments_needed.append(
+            {
+                "trial_id": b["trial_id"],
+                "condition": "baseline",
+                "problem": b["problem"],
+                "ground_truth": b["ground_truth"],
+                "model_answer": b["answer"],
+            }
+        )
     for c in conditioned:
-        judgments_needed.append({
-            "trial_id": c["trial_id"],
-            "condition": c["perturbation_type"],
-            "problem": baselines_by_id_lookup(baselines, c["trial_id"])["problem"],
-            "ground_truth": c["ground_truth"],
-            "model_answer": c["conditioned_answer"],
-        })
+        judgments_needed.append(
+            {
+                "trial_id": c["trial_id"],
+                "condition": c["perturbation_type"],
+                "problem": baselines_by_id_lookup(baselines, c["trial_id"])["problem"],
+                "ground_truth": c["ground_truth"],
+                "model_answer": c["conditioned_answer"],
+            }
+        )
 
     total = len(judgments_needed)
     n_done = len(existing_keys)
@@ -92,13 +93,16 @@ def main():
         if key in existing_keys:
             continue
 
-        if j["model_answer"].startswith("SKIPPED:") or j["model_answer"].startswith("ERROR:"):
+        if j["model_answer"].startswith("SKIPPED:") or j["model_answer"].startswith(
+            "ERROR:"
+        ):
             verdict = "incorrect"
             correct = False
         else:
             t0 = time.time()
             verdict = call_haiku(
-                haiku, JUDGE_SYSTEM,
+                haiku,
+                JUDGE_SYSTEM,
                 judge_user_prompt(j["problem"], j["ground_truth"], j["model_answer"]),
                 max_tokens=16,
             )
@@ -117,13 +121,17 @@ def main():
         append_jsonl(output, record)
         n_done += 1
         if n_done % 20 == 0 or n_done <= 5:
-            print(f"[{n_done}/{total}] trial {j['trial_id']} / {j['condition']}: "
-                  f"{'ok' if correct else 'WRONG'}")
+            print(
+                f"[{n_done}/{total}] trial {j['trial_id']} / {j['condition']}: "
+                f"{'ok' if correct else 'WRONG'}"
+            )
 
     print(f"\nDone. {n_done} judgments saved to {output}")
 
 
-def baselines_by_id_lookup(baselines, trial_id):
+def baselines_by_id_lookup(
+    baselines: list[dict[str, Any]], trial_id: int
+) -> dict[str, Any] | None:
     for b in baselines:
         if b["trial_id"] == trial_id:
             return b

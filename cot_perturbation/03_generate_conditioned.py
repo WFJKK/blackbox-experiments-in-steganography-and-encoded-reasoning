@@ -26,7 +26,7 @@ from utils.io import load_jsonl, append_jsonl
 from utils.vllm_client import get_vllm_client, get_served_model, generate_conditioned
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, choices=list(MODELS.keys()))
     parser.add_argument("--vllm-port", type=int, default=8000)
@@ -42,13 +42,14 @@ def main():
 
     perturbations = load_jsonl(perturbed_cot_path(args.model))
     if not perturbations:
-        print(f"ERROR: no perturbed CoTs at {perturbed_cot_path(args.model)}. Run step 2 first.")
+        print(
+            f"ERROR: no perturbed CoTs at {perturbed_cot_path(args.model)}. Run step 2 first."
+        )
         sys.exit(1)
 
     output = conditioned_path(args.model)
     existing_keys = {
-        (r["trial_id"], r["perturbation_type"])
-        for r in load_jsonl(output)
+        (r["trial_id"], r["perturbation_type"]) for r in load_jsonl(output)
     }
 
     # vLLM
@@ -77,20 +78,24 @@ def main():
 
         if record["perturbed_cot"].startswith("ERROR:"):
             # Perturbation failed; record an error and move on
-            append_jsonl(output, {
-                "trial_id": trial_id,
-                "model": args.model,
-                "perturbation_type": pert_type,
-                "category": record["category"],
-                "conditioned_answer": f"SKIPPED: {record['perturbed_cot']}",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
+            append_jsonl(
+                output,
+                {
+                    "trial_id": trial_id,
+                    "model": args.model,
+                    "perturbation_type": pert_type,
+                    "category": record["category"],
+                    "conditioned_answer": f"SKIPPED: {record['perturbed_cot']}",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            )
             n_done += 1
             continue
 
         t0 = time.time()
         conditioned_answer = generate_conditioned(
-            client, served,
+            client,
+            served,
             problem=baseline["problem"],
             perturbed_cot=record["perturbed_cot"],
             prompt_template=model_config["prompt_template"],
@@ -113,8 +118,10 @@ def main():
         append_jsonl(output, out_record)
         n_done += 1
 
-        print(f"[{n_done}/{total}] trial {trial_id} / {pert_type}: "
-              f"{conditioned_answer[:80]!r} ({elapsed:.1f}s)")
+        print(
+            f"[{n_done}/{total}] trial {trial_id} / {pert_type}: "
+            f"{conditioned_answer[:80]!r} ({elapsed:.1f}s)"
+        )
 
     print(f"\nDone. {n_done} conditioned answers saved to {output}")
 
