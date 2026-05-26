@@ -1,3 +1,5 @@
+*Experimental results part of SPAR 2026 fellowship research supervised by Dr. Robert Krzyzanowski at Poseidon Research.*
+
 # Blackbox Experiments in Steganography and Encoded Reasoning
 
 Two sets of blackbox experiments (API-only, no fine-tuning, no weight access) probing whether frontier language models can hide information.
